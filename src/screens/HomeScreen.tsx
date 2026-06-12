@@ -122,7 +122,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         <View style={styles.header}>
           <View style={[styles.logoContainer, { backgroundColor: colors.primary }]}>
             <Image
-              source={require('../../assets/images/favicon.png')}
+              source={require('../../assets/images/icon.png')}
               style={styles.favicon}
               resizeMode="contain"
             />
@@ -137,9 +137,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               { backgroundColor: isConnected ? '#22c55e' : '#ef4444' },
             ]}
           />
-          <Text style={[styles.statusText, { color: colors.textSecondary, fontFamily: f }]}>
-            {isConnected ? 'Sunucuya bağlı' : 'Sunucuya bağlı değil'}
-          </Text>
           {isConnected ? (
             <Wifi size={14} color="#22c55e" />
           ) : (
@@ -276,9 +273,6 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-  },
-  statusText: {
-    fontSize: theme.fontSize.sm,
   },
   formSection: {
     marginBottom: theme.spacing.lg,
