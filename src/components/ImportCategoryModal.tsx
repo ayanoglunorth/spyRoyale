@@ -11,6 +11,7 @@ import {
 import { theme } from '../constants/theme';
 import { useThemeContext } from '../context/ThemeContext';
 import { resolveShortcutCode } from '../data/embeddedCategories';
+import { decryptData } from '../utils/crypto';
 import { CustomAlertModal } from './CustomAlertModal';
 
 interface ImportCategoryModalProps {
@@ -18,15 +19,6 @@ interface ImportCategoryModalProps {
     onClose: () => void;
     onImport: (name: string, words: string[], icon: string) => void;
 }
-
-const decodeData = (base64String: string): any => {
-    try {
-        const jsonString = decodeURIComponent(escape(atob(base64String)));
-        return JSON.parse(jsonString);
-    } catch (e) {
-        throw new Error('Kod çözme hatası.');
-    }
-};
 
 export const ImportCategoryModal: React.FC<ImportCategoryModalProps> = ({
     visible,
@@ -74,8 +66,23 @@ export const ImportCategoryModal: React.FC<ImportCategoryModalProps> = ({
         }
 
         try {
-            const encodedData = code.trim().substring(5);
-            const categoryData = decodeData(encodedData);
+            const payload = code.trim().substring(5);
+            const parts = payload.split('::');
+            if (parts.length !== 2 || !parts[0] || !parts[1]) {
+                setAlertConfig({
+                    visible: true,
+                    title: 'Hata',
+                    message: 'Geçersiz kod formatı.',
+                    buttons: [
+                        {
+                            text: 'Tamam',
+                            onPress: () => setAlertConfig({ ...alertConfig, visible: false }),
+                        },
+                    ],
+                });
+                return;
+            }
+            const categoryData = decryptData(parts[0], parts[1]);
 
             if (!categoryData.name || !Array.isArray(categoryData.words)) {
                 setAlertConfig({

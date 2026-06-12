@@ -9,9 +9,13 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { theme } from './src/constants/theme';
 import { CategoriesProvider, useCategories } from './src/context/CategoriesContext';
 import { ThemeProvider, useThemeContext } from './src/context/ThemeContext';
+import { SocketProvider } from './src/context/SocketContext';
 import { DashboardScreen } from './src/screens/DashboardScreen';
+import { HomeScreen } from './src/screens/HomeScreen';
 import { InputNamesScreen } from './src/screens/InputNamesScreen';
 import { LoadingScreen } from './src/screens/LoadingScreen';
+import { LobbyScreen } from './src/screens/LobbyScreen';
+import { OnlineGameScreen } from './src/screens/OnlineGameScreen';
 import { RevealScreen } from './src/screens/RevealScreen';
 import { SetupScreen } from './src/screens/SetupScreen';
 import { GameConfig, GameState, assignRolesAndWords } from './src/utils/gameLogic';
@@ -19,11 +23,14 @@ import { GameConfig, GameState, assignRolesAndWords } from './src/utils/gameLogi
 SplashScreen.preventAutoHideAsync();
 
 export type RootStackParamList = {
-  Setup: { lastConfig?: GameConfig };
+  Home: undefined;
+  Setup: { lastConfig?: GameConfig } | undefined;
   InputNames: { totalPlayers: number; config: GameConfig };
   Loading: { config: GameConfig; playerNames: string[] };
   Reveal: { gameState: GameState };
   Dashboard: { lastConfig?: GameConfig; gameState?: GameState };
+  Lobby: { roomCode: string; username: string; isHost: boolean; initialPlayers?: Array<{ id: string; name: string; isHost: boolean; isReady: boolean; isEliminated: boolean }> };
+  OnlineGame: { roomCode: string; username: string; role?: { role: string; word: string; categoryName: string } | null };
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -62,8 +69,16 @@ function AppNavigator() {
           headerShown: false,
           cardStyle: { backgroundColor: colors.background },
         }}
-        initialRouteName="Setup"
+        initialRouteName="Home"
       >
+        <Stack.Screen name="Home">
+          {(props) => (
+            <HomeScreen
+              {...props}
+            />
+          )}
+        </Stack.Screen>
+
         <Stack.Screen name="Setup">
           {(props) => (
             <SetupScreen
@@ -143,6 +158,22 @@ function AppNavigator() {
             />
           )}
         </Stack.Screen>
+
+        <Stack.Screen name="Lobby">
+          {(props) => (
+            <LobbyScreen
+              {...props}
+            />
+          )}
+        </Stack.Screen>
+
+        <Stack.Screen name="OnlineGame">
+          {(props) => (
+            <OnlineGameScreen
+              {...props}
+            />
+          )}
+        </Stack.Screen>
       </Stack.Navigator>
     </NavigationContainer>
   );
@@ -170,9 +201,11 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        <CategoriesProvider>
-          <AppWrapper />
-        </CategoriesProvider>
+        <SocketProvider>
+          <CategoriesProvider>
+            <AppWrapper />
+          </CategoriesProvider>
+        </SocketProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );

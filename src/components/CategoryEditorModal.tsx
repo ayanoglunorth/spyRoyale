@@ -22,6 +22,7 @@ import { Category } from '../data/categories';
 import { CustomAlertModal } from './CustomAlertModal';
 import { IconSelectionModal } from './IconSelectionModal';
 import { ImportCategoryModal } from './ImportCategoryModal';
+import { encryptData } from '../utils/crypto';
 
 interface CategoryEditorModalProps {
     visible: boolean;
@@ -30,15 +31,6 @@ interface CategoryEditorModalProps {
     onSave: (id: string | undefined, name: string, words: string[], icon: string) => void;
     onDelete?: (id: string) => void;
 }
-
-const encodeData = (data: any): string => {
-    try {
-        const jsonString = JSON.stringify(data);
-        return btoa(unescape(encodeURIComponent(jsonString)));
-    } catch (e) {
-        throw new Error('Kodlama hatası oluştu.');
-    }
-};
 
 const LucideIcons: { [key: string]: any } = {
     Zap, Home, User, Gamepad, Smile, Star, Ghost, Crown, Flag, Camera, Music, Book,
@@ -213,8 +205,8 @@ export const CategoryEditorModal: React.FC<CategoryEditorModalProps> = ({
                 icon: category.icon,
             };
 
-            const encoded = encodeData(exportData);
-            const finalCode = `SPY::${encoded}`;
+            const { iv, ciphertext } = encryptData(exportData);
+            const finalCode = `SPY::${iv}::${ciphertext}`;
 
             await Clipboard.setStringAsync(finalCode);
 

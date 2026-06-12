@@ -1,4 +1,5 @@
 import CryptoJS from 'crypto-js';
+import { getEncryptionKey } from '../utils/crypto';
 
 interface EmbeddedEntry {
   ct: string;
@@ -13,23 +14,6 @@ const EMBEDDED: Record<string, EmbeddedEntry> = {
   },
 };
 
-// Key fragments — split and XOR'd with 0x5f to resist casual extraction
-const _k1 = [205, 132, 220, 6, 211, 57, 57, 27];
-const _k2 = [52, 66, 60, 188, 165, 212, 194, 248];
-const _k3 = [105, 150, 103, 61, 43, 16, 158, 167];
-const _k4 = [22, 172, 250, 76, 233, 9, 72, 38];
-
-function assembleKey(): CryptoJS.lib.WordArray {
-  const xor = 0x5f;
-  let hex = '';
-  for (const arr of [_k1, _k2, _k3, _k4]) {
-    for (const b of arr) {
-      hex += (b ^ xor).toString(16).padStart(2, '0');
-    }
-  }
-  return CryptoJS.enc.Hex.parse(hex);
-}
-
 export function resolveShortcutCode(
   code: string
 ): { name: string; words: string[]; icon: string } | null {
@@ -38,7 +22,7 @@ export function resolveShortcutCode(
   if (!entry) return null;
 
   try {
-    const key = assembleKey();
+    const key = getEncryptionKey();
     const iv = CryptoJS.enc.Hex.parse(entry.iv);
     const ciphertext = CryptoJS.enc.Hex.parse(entry.ct);
     const cipherParams = CryptoJS.lib.CipherParams.create({ ciphertext });

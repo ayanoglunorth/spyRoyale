@@ -26,7 +26,6 @@ export const CustomButton: React.FC<CustomButtonProps> = ({
 
   const buttonStyle = [
     styles.button,
-    { fontFamily: theme.fontFamily },
     variant === 'primary' && { backgroundColor: colors.buttonPrimary, borderBottomColor: colors.buttonPrimaryBorder },
     variant === 'secondary' && { backgroundColor: colors.buttonSecondary, borderWidth: 2, borderColor: colors.border, borderBottomColor: colors.buttonSecondaryBorder },
     variant === 'danger' && { backgroundColor: colors.buttonDanger, borderBottomColor: colors.buttonDangerBorder },
