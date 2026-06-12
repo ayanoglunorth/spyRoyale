@@ -8,9 +8,8 @@ import {
   ScrollView,
   Image,
 } from 'react-native';
-import { Users, Wifi, WifiOff, Gamepad2 } from 'lucide-react-native';
+import { Users, Gamepad2 } from 'lucide-react-native';
 import { CustomInput } from '../components/CustomInput';
-import { CustomButton } from '../components/CustomButton';
 import { ScreenLayout } from '../components/ScreenLayout';
 import { theme } from '../constants/theme';
 import { useThemeContext } from '../context/ThemeContext';
@@ -23,7 +22,7 @@ interface HomeScreenProps {
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const { colors } = useThemeContext();
-  const { socket, socketRef, isConnected, connect } = useSocket();
+  const { socket, socketRef, connect } = useSocket();
   const f = theme.fontFamily;
 
   const [username, setUsername] = useState('');
@@ -130,20 +129,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           <Text style={[styles.title, { color: colors.text, fontFamily: f }]}>SpyRoyale</Text>
         </View>
 
-        <View style={styles.connectionStatus}>
-          <View
-            style={[
-              styles.statusDot,
-              { backgroundColor: isConnected ? '#22c55e' : '#ef4444' },
-            ]}
-          />
-          {isConnected ? (
-            <Wifi size={14} color="#22c55e" />
-          ) : (
-            <WifiOff size={14} color="#ef4444" />
-          )}
-        </View>
-
         <View style={styles.formSection}>
           <CustomInput
             label="Kullanıcı Adı"
@@ -245,9 +230,9 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.xl,
   },
   logoContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 20,
+    width: 120,
+    height: 120,
+    borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: theme.spacing.md,
@@ -255,24 +240,12 @@ const styles = StyleSheet.create({
   favicon: {
     width: '100%',
     height: '100%',
-    borderRadius: 18,
+    borderRadius: 26,
   },
   title: {
     fontSize: theme.fontSize.xxxl,
     fontWeight: theme.fontWeight.bold,
     letterSpacing: 1,
-  },
-  connectionStatus: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: theme.spacing.xs,
-    marginBottom: theme.spacing.lg,
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
   },
   formSection: {
     marginBottom: theme.spacing.lg,
