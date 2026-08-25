@@ -10,8 +10,7 @@ import {
 } from 'react-native';
 import { theme } from '../constants/theme';
 import { useThemeContext } from '../context/ThemeContext';
-import { resolveShortcutCode } from '../data/embeddedCategories';
-import { decryptData } from '../utils/crypto';
+import { decodeSharedCategory } from '../utils/crypto';
 import { CustomAlertModal } from './CustomAlertModal';
 
 interface ImportCategoryModalProps {
@@ -41,16 +40,7 @@ export const ImportCategoryModal: React.FC<ImportCategoryModalProps> = ({
     const f = theme.fontFamily;
 
     const handleImport = () => {
-        // Check for shortcut codes before SPY:: validation
-        const shortcut = resolveShortcutCode(code);
-        if (shortcut) {
-            onImport(shortcut.name, shortcut.words, shortcut.icon);
-            setCode('');
-            onClose();
-            return;
-        }
-
-        if (!code.trim().startsWith('SPY::')) {
+        if (!code.trim().startsWith('SPYROYALE:1:')) {
             setAlertConfig({
                 visible: true,
                 title: 'Hata',
@@ -66,23 +56,7 @@ export const ImportCategoryModal: React.FC<ImportCategoryModalProps> = ({
         }
 
         try {
-            const payload = code.trim().substring(5);
-            const parts = payload.split('::');
-            if (parts.length !== 2 || !parts[0] || !parts[1]) {
-                setAlertConfig({
-                    visible: true,
-                    title: 'Hata',
-                    message: 'Geçersiz kod formatı.',
-                    buttons: [
-                        {
-                            text: 'Tamam',
-                            onPress: () => setAlertConfig({ ...alertConfig, visible: false }),
-                        },
-                    ],
-                });
-                return;
-            }
-            const categoryData = decryptData(parts[0], parts[1]);
+            const categoryData = decodeSharedCategory(code);
 
             if (!categoryData.name || !Array.isArray(categoryData.words)) {
                 setAlertConfig({

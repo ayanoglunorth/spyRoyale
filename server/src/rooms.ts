@@ -144,6 +144,9 @@ export class RoomManager {
     if (room.phase !== 'lobby') {
       throw new Error('Oyun zaten başlamış, bu odaya katılamazsınız.');
     }
+    if (room.players.length >= room.settings.agentCount + room.settings.spyCount) {
+      throw new Error('Oda dolu.');
+    }
 
     const player: PlayerData = {
       id: crypto.randomUUID(),
@@ -204,6 +207,9 @@ export class RoomManager {
 
     if (room.players.length < totalPlayers) {
       throw new Error(`Yeterli oyuncu yok. Beklenen: ${totalPlayers}, Mevcut: ${room.players.length}`);
+    }
+    if (room.players.length > totalPlayers) {
+      throw new Error('Oda oyuncu sınırını aştı.');
     }
     if (room.players.length < 4) {
       throw new Error('Minimum 4 oyuncu gereklidir.');

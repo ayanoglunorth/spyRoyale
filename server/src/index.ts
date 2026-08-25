@@ -3,16 +3,58 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import { RoomManager, CategoryData } from './rooms.js';
+import {
+  LIMITS,
+  createRoomPayload,
+  joinRoomPayload,
+  roomPayload,
+  startGamePayload,
+  timerPayload,
+  votePayload,
+} from './validation.js';
 
 const app = express();
-app.use(cors());
+const isProduction = process.env.NODE_ENV === 'production';
+const allowedOrigins = (process.env.SERVER_ALLOWED_ORIGINS || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+const localOrigins = ['http://localhost:8081', 'http://localhost:19006', 'http://localhost:3000'];
+const trustedOrigins = new Set(isProduction ? allowedOrigins : [...localOrigins, ...allowedOrigins]);
+
+if (isProduction && trustedOrigins.size === 0) {
+  throw new Error('Production requires SERVER_ALLOWED_ORIGINS.');
+}
+
+const isAllowedOrigin = (origin?: string) => !origin || trustedOrigins.has(origin);
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (error: Error | null, allowed?: boolean) => void) => {
+    callback(null, isAllowedOrigin(origin));
+  },
+  methods: ['GET', 'POST'],
+};
+
+app.disable('x-powered-by');
+app.use(cors(corsOptions));
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
-  cors: { origin: '*', methods: ['GET', 'POST'] },
+  cors: corsOptions,
+  maxHttpBufferSize: 100_000,
 });
 
 const roomManager = new RoomManager();
+const connectionAttempts = new Map<string, number[]>();
+
+function connectionAllowed(address: string): boolean {
+  const now = Date.now();
+  const timestamps = connectionAttempts.get(address) || [];
+  const recent = timestamps.filter((timestamp) => now - timestamp <= LIMITS.eventWindowMs);
+  if (recent.length >= 30) return false;
+  recent.push(now);
+  connectionAttempts.set(address, recent);
+  return true;
+}
 
 app.get('/', (_req, res) => {
   res.json({ status: 'SpyRoyale server running', rooms: roomManager.getRoomCount() });
@@ -62,25 +104,29 @@ interface TimerActionPayload {
 }
 
 io.on('connection', (socket) => {
+  if (!connectionAllowed(socket.handshake.address)) {
+    socket.emit('error', { message: 'Çok fazla bağlantı denemesi.' });
+    socket.disconnect(true);
+    return;
+  }
+  const eventTimestamps: number[] = [];
+  socket.use(([event], next) => {
+    const now = Date.now();
+    while (eventTimestamps.length && now - eventTimestamps[0] > LIMITS.eventWindowMs) eventTimestamps.shift();
+    if (eventTimestamps.length >= LIMITS.eventsPerWindow) {
+      socket.emit('error', { message: 'Çok fazla istek gönderildi. Lütfen bekleyin.' });
+      return next(new Error('Rate limit exceeded'));
+    }
+    eventTimestamps.push(now);
+    next();
+  });
+
   console.log(`Bağlantı: ${socket.id}`);
 
   socket.on('create_room', (payload: CreateRoomPayload) => {
     try {
-      const { username, agentCount, spyCount, categories } = payload;
-
-      if (!username?.trim()) {
-        socket.emit('error', { message: 'Kullanıcı adı gerekli.' });
-        return;
-      }
-      if (agentCount < 3) {
-        socket.emit('error', { message: 'Minimum 3 ajan gerekli.' });
-        return;
-      }
-      if (spyCount < 1 || spyCount > agentCount - 2) {
-        socket.emit('error', { message: `Spy sayısı 1 ile ${agentCount - 2} arasında olmalı.` });
-        return;
-      }
-      const room = roomManager.createRoom(socket.id, username.trim(), {
+      const { username, agentCount, spyCount, categories } = createRoomPayload(payload);
+      const room = roomManager.createRoom(socket.id, username, {
         agentCount,
         spyCount,
         categories: categories || [],
@@ -110,18 +156,8 @@ io.on('connection', (socket) => {
 
   socket.on('join_room', (payload: JoinRoomPayload) => {
     try {
-      const { roomCode, username } = payload;
-
-      if (!roomCode?.trim()) {
-        socket.emit('error', { message: 'Oda kodu gerekli.' });
-        return;
-      }
-      if (!username?.trim()) {
-        socket.emit('error', { message: 'Kullanıcı adı gerekli.' });
-        return;
-      }
-
-      const room = roomManager.joinRoom(roomCode.toUpperCase(), socket.id, username.trim());
+      const { roomCode, username } = joinRoomPayload(payload);
+      const room = roomManager.joinRoom(roomCode, socket.id, username);
       socket.join(room.code);
 
       const publicPlayers = room.players.map((p) => ({
@@ -152,18 +188,20 @@ io.on('connection', (socket) => {
 
   socket.on('start_game', (payload: StartGamePayload) => {
     try {
-      const { roomCode: rawCode } = payload;
-      const roomCode = rawCode.toUpperCase();
+      const validated = startGamePayload(payload);
+      const roomCode = validated.roomCode;
       const existing = roomManager.getRoom(roomCode);
       if (existing) {
-        if (payload.categories && payload.categories.length > 0) {
-          existing.settings.categories = payload.categories;
+        const hostPlayer = existing.players.find((player) => player.socketId === socket.id);
+        if (!hostPlayer?.isHost) throw new Error('Sadece host oyun ayarlarını değiştirebilir.');
+        if (validated.categories && validated.categories.length > 0) {
+          existing.settings.categories = validated.categories;
         }
-        if (payload.agentCount !== undefined) {
-          existing.settings.agentCount = payload.agentCount;
+        if (validated.agentCount !== undefined) {
+          existing.settings.agentCount = validated.agentCount;
         }
-        if (payload.spyCount !== undefined) {
-          existing.settings.spyCount = payload.spyCount;
+        if (validated.spyCount !== undefined) {
+          existing.settings.spyCount = validated.spyCount;
         }
       }
       roomManager.startGame(roomCode, socket.id);
@@ -197,7 +235,7 @@ io.on('connection', (socket) => {
 
   socket.on('player_ready', (payload: PlayerReadyPayload) => {
     try {
-      const roomCode = payload.roomCode.toUpperCase();
+      const { roomCode } = roomPayload(payload);
       const room = roomManager.getRoom(roomCode);
       if (!room) return;
 
@@ -228,7 +266,7 @@ io.on('connection', (socket) => {
 
   socket.on('start_vote', (payload: StartVotePayload) => {
     try {
-      const roomCode = payload.roomCode.toUpperCase();
+      const { roomCode } = roomPayload(payload);
       const room = roomManager.getRoom(roomCode);
       if (!room) return;
 
@@ -249,8 +287,7 @@ io.on('connection', (socket) => {
 
   socket.on('cast_vote', (payload: CastVotePayload) => {
     try {
-      const roomCode = payload.roomCode.toUpperCase();
-      const targetId = payload.targetId;
+      const { roomCode, targetId } = votePayload(payload);
       const room = roomManager.getRoom(roomCode);
       if (!room) return;
 
@@ -275,10 +312,11 @@ io.on('connection', (socket) => {
 
   socket.on('return_to_lobby', (payload: ReturnToLobbyPayload) => {
     try {
-      const roomCode = payload.roomCode.toUpperCase();
+      const { roomCode } = roomPayload(payload);
       const room = roomManager.getRoom(roomCode);
       if (!room) return;
       if (room.phase === 'lobby') return;
+      if (!room.players.some((player) => player.socketId === socket.id)) return;
 
       roomManager.resetToLobby(roomCode);
 
@@ -304,16 +342,16 @@ io.on('connection', (socket) => {
 
   socket.on('timer_action', (payload: TimerActionPayload) => {
     try {
-      const roomCode = payload.roomCode.toUpperCase();
+      const { roomCode, action, timeLeft, selectedTime } = timerPayload(payload);
       const room = roomManager.getRoom(roomCode);
       if (!room) return;
       const player = room.players.find((p) => p.socketId === socket.id);
       if (!player?.isHost) return;
 
       io.to(roomCode).emit('timer_sync', {
-        action: payload.action,
-        timeLeft: payload.timeLeft,
-        selectedTime: payload.selectedTime,
+        action,
+        timeLeft,
+        selectedTime,
       });
     } catch {
       // Silently handle

@@ -22,7 +22,7 @@ import { Category } from '../data/categories';
 import { CustomAlertModal } from './CustomAlertModal';
 import { IconSelectionModal } from './IconSelectionModal';
 import { ImportCategoryModal } from './ImportCategoryModal';
-import { encryptData } from '../utils/crypto';
+import { encodeSharedCategory } from '../utils/crypto';
 
 interface CategoryEditorModalProps {
     visible: boolean;
@@ -205,15 +205,14 @@ export const CategoryEditorModal: React.FC<CategoryEditorModalProps> = ({
                 icon: category.icon,
             };
 
-            const { iv, ciphertext } = encryptData(exportData);
-            const finalCode = `SPY::${iv}::${ciphertext}`;
+            const finalCode = encodeSharedCategory(exportData);
 
             await Clipboard.setStringAsync(finalCode);
 
             setAlertConfig({
                 visible: true,
                 title: 'Başarılı',
-                message: 'Gizli kategori kodu kopyalandı!',
+                message: 'Kategori paylaşım kodu kopyalandı. Bu kod şifreli değildir; yalnızca güvenilir kişilerle paylaşın.',
                 buttons: [
                     {
                         text: 'Tamam',

@@ -1,55 +1,32 @@
-import CryptoJS from 'crypto-js';
+import { decode, encode } from 'base-64';
 
-const _k1 = [205, 132, 220, 6, 211, 57, 57, 27];
-const _k2 = [52, 66, 60, 188, 165, 212, 194, 248];
-const _k3 = [105, 150, 103, 61, 43, 16, 158, 167];
-const _k4 = [22, 172, 250, 76, 233, 9, 72, 38];
-
-export function getEncryptionKey(): CryptoJS.lib.WordArray {
-  const xor = 0x5f;
-  let hex = '';
-  for (const arr of [_k1, _k2, _k3, _k4]) {
-    for (const b of arr) {
-      hex += (b ^ xor).toString(16).padStart(2, '0');
-    }
-  }
-  return CryptoJS.enc.Hex.parse(hex);
+export interface SharedCategory {
+  version: 1;
+  name: string;
+  words: string[];
+  icon: string;
 }
 
-export function encryptData(data: any): { iv: string; ciphertext: string } {
-  try {
-    const key = getEncryptionKey();
-    const iv = CryptoJS.lib.WordArray.random(16);
-    const jsonString = JSON.stringify(data);
-    const encrypted = CryptoJS.AES.encrypt(jsonString, key, {
-      iv,
-      mode: CryptoJS.mode.CBC,
-      padding: CryptoJS.pad.Pkcs7,
-    });
-    return {
-      iv: iv.toString(CryptoJS.enc.Hex),
-      ciphertext: encrypted.ciphertext.toString(CryptoJS.enc.Hex),
-    };
-  } catch (e) {
-    throw new Error('Şifreleme hatası oluştu.');
-  }
+const PREFIX = 'SPYROYALE:1:';
+
+// This format supports portable sharing; it deliberately provides no secrecy.
+const encodeUtf8 = (value: string) => encode(unescape(encodeURIComponent(value)));
+const decodeUtf8 = (value: string) => decodeURIComponent(escape(decode(value)));
+
+export function encodeSharedCategory(category: Omit<SharedCategory, 'version'>): string {
+  return `${PREFIX}${encodeUtf8(JSON.stringify({ version: 1, ...category }))}`;
 }
 
-export function decryptData(ivHex: string, ciphertextHex: string): any {
-  try {
-    const key = getEncryptionKey();
-    const iv = CryptoJS.enc.Hex.parse(ivHex);
-    const ciphertext = CryptoJS.enc.Hex.parse(ciphertextHex);
-    const cipherParams = CryptoJS.lib.CipherParams.create({ ciphertext });
-    const decrypted = CryptoJS.AES.decrypt(cipherParams, key, {
-      iv,
-      mode: CryptoJS.mode.CBC,
-      padding: CryptoJS.pad.Pkcs7,
-    });
-    const json = decrypted.toString(CryptoJS.enc.Utf8);
-    if (!json) throw new Error('Decryption produced empty result');
-    return JSON.parse(json);
-  } catch (e) {
-    throw new Error('Kod çözme hatası.');
+export function decodeSharedCategory(value: string): SharedCategory {
+  if (!value.trim().startsWith(PREFIX)) throw new Error('Desteklenmeyen kategori kodu.');
+  const data: unknown = JSON.parse(decodeUtf8(value.trim().slice(PREFIX.length)));
+  if (!data || typeof data !== 'object') throw new Error('Kategori verisi geçersiz.');
+  const category = data as Partial<SharedCategory>;
+  if (category.version !== 1 || typeof category.name !== 'string' || !Array.isArray(category.words) || typeof category.icon !== 'string') {
+    throw new Error('Kategori verisi geçersiz.');
   }
+  if (!category.name.trim() || category.name.length > 48 || category.words.length < 2 || category.words.length > 100 || category.words.some((word) => typeof word !== 'string' || !word.trim() || word.length > 64)) {
+    throw new Error('Kategori verisi sınırların dışında.');
+  }
+  return { version: 1, name: category.name.trim(), words: category.words.map((word) => word.trim()), icon: category.icon };
 }

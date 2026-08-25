@@ -14,6 +14,8 @@ import { theme } from '../constants/theme';
 import { useThemeContext } from '../context/ThemeContext';
 import { CustomButton } from './CustomButton';
 
+const SUPPORT_EMAIL = process.env.EXPO_PUBLIC_SUPPORT_EMAIL?.trim();
+
 interface HelpContactModalProps {
     visible: boolean;
     onClose: () => void;
@@ -25,15 +27,15 @@ export const HelpContactModal: React.FC<HelpContactModalProps> = ({ visible, onC
     const { colors } = useThemeContext();
 
     const handleSendEmail = async () => {
+        if (!SUPPORT_EMAIL) return;
         if (!message.trim()) {
             setFeedbackMessage('Lütfen bir mesaj yazın.');
             return;
         }
 
-        const email = 'ayanogluinthenorth@gmail.com';
         const subject = encodeURIComponent('SPY APP Geri Bildirim');
         const body = encodeURIComponent(message);
-        const url = `mailto:${email}?subject=${subject}&body=${body}`;
+        const url = `mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`;
 
         try {
             const canOpen = await Linking.canOpenURL(url);
@@ -170,7 +172,7 @@ export const HelpContactModal: React.FC<HelpContactModalProps> = ({ visible, onC
                             </Text>
                         </View>
 
-                        <View style={styles.section}>
+                        {SUPPORT_EMAIL ? <View style={styles.section}>
                             <Text style={[styles.sectionTitle, { color: colors.primary, fontFamily: f }]}>İletişim / Hata Bildirimi</Text>
                             <Text style={[styles.text, { color: colors.textSecondary, fontFamily: f }]}>
                                 Hata bildirimi, öneri veya geri bildiriminizi bize iletin:
@@ -194,7 +196,7 @@ export const HelpContactModal: React.FC<HelpContactModalProps> = ({ visible, onC
                                 <Text style={[styles.feedbackText, { color: colors.primary, fontFamily: f }]}>{feedbackMessage}</Text>
                             ) : null}
                             <CustomButton title="Gönder" onPress={handleSendEmail} />
-                        </View>
+                        </View> : null}
                     </ScrollView>
                 </View>
             </View>
