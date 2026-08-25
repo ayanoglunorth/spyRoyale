@@ -1,12 +1,12 @@
-# Katkı Rehberi
+# Contributing
 
-Katkılar issue veya pull request yoluyla kabul edilir. Büyük davranış değişiklikleri için önce hedefi açıklayan bir issue açın.
+Contributions are accepted through issues and pull requests. For significant behavior changes, open an issue describing the intended outcome first.
 
-## Geliştirme akışı
+## Development workflow
 
-1. `main` dalından kısa ömürlü bir dal oluşturun.
-2. Davranış değişikliğini kapsayan test ekleyin veya güncelleyin.
-3. Pull request’ten önce `npm run lint`, `npm run typecheck` ve `npm run test:server` komutlarını çalıştırın.
-4. Ortam değişkenleri, kişisel veri, gizli anahtar veya oluşturulmuş çıktı eklemeyin.
+1. Create a short-lived branch from `main`.
+2. Add or update tests for the behavior you change.
+3. Run `npm run lint`, `npm run typecheck`, and `npm run test:server` before opening a pull request.
+4. Do not commit environment variables, personal data, secrets, or generated output.
 
-Kod, mevcut TypeScript kurallarına uygun, küçük ve gözden geçirilebilir değişiklikler halinde gönderilmelidir.
+Keep changes small, reviewable, and consistent with the existing TypeScript conventions.
