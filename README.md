@@ -1,6 +1,6 @@
 # SpyRoyale
 
-SpyRoyale is a Turkish social-deduction game that can be played on one device or in Socket.IO-powered multiplayer rooms. Players give clues based on hidden roles while agents attempt to identify the spies.
+SpyRoyale is a Turkish social-deduction game for one device or Socket.IO multiplayer rooms. Players give clues based on hidden roles while agents try to identify the spies.
 
 ## Features
 
@@ -12,7 +12,7 @@ SpyRoyale is a Turkish social-deduction game that can be played on one device or
 
 ## Architecture
 
-The Expo/React Native client lives under `src/`. Real-time game state is held in memory by a separate Express and Socket.IO server under `server/`. The server does not use a persistent database, user accounts, or a payment system.
+The Expo/React Native client lives under `src/`. A separate Express and Socket.IO server under `server/` keeps real-time game state in memory. The server does not use a persistent database, user accounts, or a payment system.
 
 ## Requirements
 
@@ -71,7 +71,7 @@ npm run audit:prod
 npm --prefix server audit --omit=dev --audit-level=high
 ```
 
-GitHub Actions runs linting, type checks, server tests, dependency audits, and secret scanning on every push and pull request.
+GitHub Actions runs linting, type checks, server tests, dependency audits, and secret scanning for every push and pull request.
 
 ## Deployment boundaries
 
